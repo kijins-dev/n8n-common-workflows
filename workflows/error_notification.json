@@ -1,44 +1,50 @@
 {
-  "name": "Error Notification to Chatwork",
+  "name": "共通エラー通知",
   "nodes": [
     {
       "parameters": {},
-      "id": "error-trigger-node",
+      "id": "error-trigger",
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
-      "position": [250, 300]
+      "position": [240, 300]
     },
     {
       "parameters": {
-        "jsCode": "// エラー情報を抽出してChatwork用メッセージを構築\nconst errorData = $input.all()[0].json;\n\n// 基本情報の取得\nconst workflowName = errorData.workflow?.name || 'Unknown Workflow';\nconst executionId = errorData.execution?.id || 'Unknown';\nconst errorMessage = errorData.execution?.error?.message || 'No error message';\nconst failedNodeName = errorData.execution?.lastNodeExecuted || 'Unknown Node';\n\n// 実行URLの構築\nconst baseUrl = 'https://michi-gaeru.app.n8n.cloud';\nconst executionUrl = `${baseUrl}/workflow/${errorData.workflow?.id}/executions/${executionId}`;\n\n// 日本時間でタイムスタンプ\nconst now = new Date();\nconst jstTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));\nconst timestamp = jstTime.toISOString().replace('T', ' ').substring(0, 19);\n\n// Chatwork用メッセージ（絵文字で視認性向上）\nconst message = `[info][title](devil) ワークフローエラー発生[/title]\n■ ワークフロー: ${workflowName}\n■ 失敗ノード: ${failedNodeName}\n■ エラー内容: ${errorMessage}\n■ 実行ID: ${executionId}\n■ 発生時刻: ${timestamp} (JST)\n■ 詳細確認: ${executionUrl}[/info]`;\n\nreturn [{ json: { message } }];"
+        "jsCode": "const error = $input.first().json;\n\nconst workflowName = error.workflow?.name || 'Unknown';\nconst workflowId = error.workflow?.id || '';\nconst nodeName = error.execution?.error?.node?.name || 'Unknown';\nconst errorMessage = error.execution?.error?.message || 'No message';\nconst executionId = error.execution?.id || '';\n\nconst timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });\n\nconst baseUrl = 'https://michi-gaeru.app.n8n.cloud';\nconst executionUrl = executionId ? `${baseUrl}/workflow/${workflowId}/executions/${executionId}` : '';\n\nlet message = `[info][title]n8n エラー通知[/title]`;\nmessage += `発生時刻: ${timestamp}\\n`;\nmessage += `ワークフロー: ${workflowName}\\n`;\nmessage += `失敗ノード: ${nodeName}\\n`;\nmessage += `エラー内容: ${errorMessage}`;\nif (executionUrl) {\n  message += `\\n\\n実行ログ: ${executionUrl}`;\n}\nmessage += `[/info]`;\n\nreturn [{ json: { message } }];"
       },
-      "id": "code-node",
-      "name": "Build Error Message",
+      "id": "format-message",
+      "name": "Format Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [470, 300]
+      "position": [460, 300]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.chatwork.com/v2/rooms/202698767/messages",
+        "url": "https://api.chatwork.com/v2/rooms/252085376/messages",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
-        "options": {},
         "sendBody": true,
-        "specifyBody": "string",
-        "body": "={{ 'body=' + encodeURIComponent($json.message) }}",
-        "contentType": "application/x-www-form-urlencoded"
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
       },
-      "id": "chatwork-node",
-      "name": "Send to Chatwork",
+      "id": "chatwork-send",
+      "name": "Chatwork Send",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [690, 300],
+      "position": [680, 300],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "YOUR_CHATWORK_CREDENTIAL_ID",
+          "id": "YOUR_CREDENTIAL_ID",
           "name": "Chatwork API"
         }
       }
@@ -49,18 +55,18 @@
       "main": [
         [
           {
-            "node": "Build Error Message",
+            "node": "Format Message",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Build Error Message": {
+    "Format Message": {
       "main": [
         [
           {
-            "node": "Send to Chatwork",
+            "node": "Chatwork Send",
             "type": "main",
             "index": 0
           }
