@@ -22,8 +22,7 @@ n8nワークフロー自動化プロジェクトの共通基盤
 ```
 n8n-common-workflows/
 ├── workflows/
-│   ├── error_notification.json    # エラー通知ワークフロー
-│   └── ...
+│   └── error_notification.json    # エラー通知ワークフロー ✅
 ├── prompts/
 │   ├── base_prompt.md             # 共通プロンプト
 │   ├── chatwork_summary.md        # Chatwork用
@@ -31,17 +30,18 @@ n8n-common-workflows/
 ├── config/
 │   └── room_config_template.csv   # ルーム設定テンプレート
 └── docs/
-    └── setup.md                   # セットアップ手順
+    ├── setup.md                   # セットアップ手順
+    └── error_notification_setup.md # エラー通知セットアップ ✅
 ```
 
-## 実装予定
+## 実装状況
 
-### Phase 1: 安定化（今週）
-- [ ] エラー通知ワークフロー
+### Phase 1: 安定化
+- [x] エラー通知ワークフロー（2026-01-13）
 - [ ] 重複処理防止（Tactiq）
 - [ ] 価値検証フォーム
 
-### Phase 2: 評価（来週）
+### Phase 2: 評価
 - [ ] 品質検証の仕組み
 - [ ] 実行ログ標準化
 
@@ -53,9 +53,21 @@ n8n-common-workflows/
 | 要約生成 | Claude API |
 | ナレッジ保存 | Obsidian（Local REST API + ngrok） |
 | データアーカイブ | Google Sheets |
+| 通知 | Chatwork API |
+
+## クイックスタート
+
+### エラー通知の導入
+
+1. `workflows/error_notification.json` をn8nにインポート
+2. Chatwork認証情報を設定
+3. ワークフローを有効化
+
+詳細: [docs/error_notification_setup.md](docs/error_notification_setup.md)
 
 ## 更新履歴
 
 | 日付 | 内容 |
 |------|------|
+| 2026-01-13 | エラー通知ワークフロー追加 |
 | 2026-01-12 | リポジトリ作成 |

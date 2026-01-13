@@ -1,0 +1,74 @@
+{
+  "name": "Error Notification to Chatwork",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "error-trigger-node",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// エラー情報を抽出してChatwork用メッセージを構築\nconst errorData = $input.all()[0].json;\n\n// 基本情報の取得\nconst workflowName = errorData.workflow?.name || 'Unknown Workflow';\nconst executionId = errorData.execution?.id || 'Unknown';\nconst errorMessage = errorData.execution?.error?.message || 'No error message';\nconst failedNodeName = errorData.execution?.lastNodeExecuted || 'Unknown Node';\n\n// 実行URLの構築\nconst baseUrl = 'https://michi-gaeru.app.n8n.cloud';\nconst executionUrl = `${baseUrl}/workflow/${errorData.workflow?.id}/executions/${executionId}`;\n\n// 日本時間でタイムスタンプ\nconst now = new Date();\nconst jstTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));\nconst timestamp = jstTime.toISOString().replace('T', ' ').substring(0, 19);\n\n// Chatwork用メッセージ（絵文字で視認性向上）\nconst message = `[info][title](devil) ワークフローエラー発生[/title]\n■ ワークフロー: ${workflowName}\n■ 失敗ノード: ${failedNodeName}\n■ エラー内容: ${errorMessage}\n■ 実行ID: ${executionId}\n■ 発生時刻: ${timestamp} (JST)\n■ 詳細確認: ${executionUrl}[/info]`;\n\nreturn [{ json: { message } }];"
+      },
+      "id": "code-node",
+      "name": "Build Error Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.chatwork.com/v2/rooms/202698767/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ 'body=' + encodeURIComponent($json.message) }}",
+        "contentType": "application/x-www-form-urlencoded"
+      },
+      "id": "chatwork-node",
+      "name": "Send to Chatwork",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [690, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CHATWORK_CREDENTIAL_ID",
+          "name": "Chatwork API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Error Message": {
+      "main": [
+        [
+          {
+            "node": "Send to Chatwork",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
